@@ -3,13 +3,13 @@ require "json"
 struct GitClient::Commit
   include JSON::Serializable
 
-  getter commit : String
+  getter hash : String
   getter subject : String
   getter author : String?
   getter date : String?
 
   def initialize(
-    @commit : String,
+    @hash : String,
     @subject : String,
     @author : String? = nil,
     @date : String? = nil

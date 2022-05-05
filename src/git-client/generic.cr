@@ -3,6 +3,26 @@ require "file_utils"
 require "dir"
 
 class GitClient::Generic < GitClient::Interface
+  getter cache_path : String { create_temp_folder }
+
+  def initialize(@repository : String, @username : String? = nil, @password : String? = nil, branch : String? = nil)
+    super
+
+    # Ensure cache folder exists and is ready to list commits
+    build_cache if use_cache?
+  end
+
+  # This caches the git history and nothing else
+  protected def build_cache
+    Commands.new(cache_path).commits(@repository, cached_branch, depth: nil)
+  end
+
+  def finalize
+    FileUtils.rm_rf(cache_path) if use_cache?
+  rescue
+    # we can ignore failures here
+  end
+
   def default_branch : String
     stdout = IO::Memory.new
     success = Process.new("git", {"ls-remote", "--symref", @repository, "HEAD"}, output: stdout, error: stdout).wait.success?
@@ -41,18 +61,22 @@ class GitClient::Generic < GitClient::Interface
     ls_remote("tags")
   end
 
-  def releases : Array(String)
-    [] of String
-  end
-
   protected def get_commits(branch : String, file : String? = nil, depth : Int? = 50) : Array(Commit)
-    temp_folder = Time.utc.to_unix_ms.to_s + rand(9999).to_s
-    begin
-      Dir.mkdir temp_folder
-      Commands.new(temp_folder).commits(@repository, branch, file, depth)
-    ensure
-      # delete the temp folder
-      spawn { FileUtils.rm_rf(temp_folder) }
+    if use_cache? && branch == cached_branch
+      commands = Commands.new(cache_path)
+      commands.pull_logs
+      commands.commits(file, depth)
+    else
+      create_temp_folder do |temp_folder|
+        if file.presence && depth
+          # We need to download the full repo history to grab the file history
+          commands = Commands.new(temp_folder)
+          commands.clone_logs(@repository, branch, depth: nil)
+          commands.commits(file, depth)
+        else
+          Commands.new(temp_folder).commits(@repository, branch, file, depth)
+        end
+      end
     end
   end
 
@@ -92,41 +116,22 @@ class GitClient::Generic < GitClient::Interface
     end
   end
 
-  protected def create_temp_folder
-    temp_folder = "#{Time.utc.to_unix_ms}_#{rand(9999)}"
-    Dir.mkdir temp_folder
-    temp_folder
-  end
-
-  def fetch_branch(branch : String, download_to_path : String | Path) : Nil
+  def fetch_commit(ref : String, download_to_path : String | Path) : Commit
     download_to = download_to_path.to_s
 
     # download the commit
-    temp_folder = create_temp_folder
-    git = GitRepo.new(temp_folder)
-    git.init
-    git.add_origin @repository
-    git.fetch branch    # git fetch --depth 1 origin branch
-    git.checkout branch # git checkout branch
+    create_temp_folder do |temp_folder|
+      git = Commands.new(temp_folder)
+      git.init
+      git.add_origin @repository
+      git.fetch ref             # git fetch --depth 1 origin <sha1>
+      git.checkout "FETCH_HEAD" # git checkout FETCH_HEAD
 
-    move_into_place(temp_folder, download_to)
-  end
+      move_into_place(temp_folder, download_to)
 
-  def fetch_commit(hash_or_tag : String, download_to_path : String | Path) : Nil
-    download_to = download_to_path.to_s
-
-    # download the commit
-    temp_folder = create_temp_folder
-    git = GitRepo.new(temp_folder)
-    git.init
-    git.add_origin @repository
-    git.fetch hash_or_tag     # git fetch --depth 1 origin <sha1>
-    git.checkout "FETCH_HEAD" # git checkout FETCH_HEAD
-
-    move_into_place(temp_folder, download_to)
-  end
-
-  def fetch_release(version : String, download_to_path : String | Path) : Nil
-    raise NotImplementedError.new("release downloads are not supported for this repository: #{@repository}")
+      # grab the current commit hash
+      git.path = download_to
+      git.commits(depth: 1).first
+    end
   end
 end
