@@ -2,7 +2,7 @@ require "file_utils"
 require "./commit"
 require "./errors"
 
-abstract class GitClient::Interface
+abstract class GitRepository::Interface
   getter repository : String
   getter username : String?
   getter password : String?

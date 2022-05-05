@@ -1,6 +1,6 @@
 require "./commit"
 
-struct GitClient::Commands
+struct GitRepository::Commands
   def initialize(@path : String = "")
   end
 

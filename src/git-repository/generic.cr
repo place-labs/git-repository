@@ -1,7 +1,7 @@
 require "./interface"
 require "./commands"
 
-class GitClient::Generic < GitClient::Interface
+class GitRepository::Generic < GitRepository::Interface
   getter cache_path : String { create_temp_folder }
 
   def initialize(@repository : String, @username : String? = nil, @password : String? = nil, branch : String? = nil)

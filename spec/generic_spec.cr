@@ -1,7 +1,7 @@
 require "./spec_helper"
 
-module GitClient
-  describe GitClient::Generic do
+module GitRepository
+  describe GitRepository::Generic do
     client = Generic.new("https://github.com/PlaceOS/backoffice")
 
     it "should return the default branch" do

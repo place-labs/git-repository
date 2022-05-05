@@ -1,2 +1,2 @@
 require "spec"
-require "../src/git-client"
+require "../src/git-repository"

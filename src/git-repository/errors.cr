@@ -1,6 +1,6 @@
 require "./commit"
 
-module GitClient
+module GitRepository
   class Error < Exception
   end
 

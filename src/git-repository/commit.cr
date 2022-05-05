@@ -1,6 +1,6 @@
 require "json"
 
-struct GitClient::Commit
+struct GitRepository::Commit
   include JSON::Serializable
 
   getter hash : String
