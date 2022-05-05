@@ -21,5 +21,4 @@ module GitClient
   end
 end
 
-require "./git-client/errors"
-require "./git-client/*"
+require "./git-client/generic"

@@ -1,6 +1,5 @@
 require "./interface"
-require "file_utils"
-require "dir"
+require "./commands"
 
 class GitClient::Generic < GitClient::Interface
   getter cache_path : String { create_temp_folder }
@@ -24,10 +23,7 @@ class GitClient::Generic < GitClient::Interface
   end
 
   def default_branch : String
-    stdout = IO::Memory.new
-    success = Process.new("git", {"ls-remote", "--symref", @repository, "HEAD"}, output: stdout, error: stdout).wait.success?
-    raise GitCommandError.new("failed to obtain default branch\n#{stdout}") unless success
-    stdout = stdout.to_s
+    stdout = Commands.new.run_git("ls-remote", {"--symref", @repository, "HEAD"}).to_s
     begin
       stdout.to_s.split("ref: refs/heads/", 2)[1].split('\t', 2)[0]
     rescue error
@@ -39,11 +35,7 @@ class GitClient::Generic < GitClient::Interface
   end
 
   protected def ls_remote(type : String)
-    stdout = IO::Memory.new
-    success = Process.new("git", {"ls-remote", "--#{type}", @repository}, output: stdout, error: stdout).wait.success?
-    raise GitCommandError.new("failed to obtain remote refs\n#{stdout}") unless success
-    output = stdout.to_s.split('\n')
-
+    output = Commands.new.run_git("ls-remote", {"--#{type}", @repository}).to_s.split('\n')
     split_string = "#{type}/"
     output.compact_map do |ref|
       next if ref.empty?

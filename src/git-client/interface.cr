@@ -1,4 +1,6 @@
+require "file_utils"
 require "./commit"
+require "./errors"
 
 abstract class GitClient::Interface
   getter repository : String

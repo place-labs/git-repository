@@ -1,68 +1,51 @@
 require "./commit"
 
 struct GitClient::Commands
-  def initialize(@path : String)
+  def initialize(@path : String = "")
   end
 
   # NOTE:: assumes this path exists!
   property path
 
   def init
-    stdout = IO::Memory.new
-    success = Process.new("git", {"-C", path, "init"}, output: stdout, error: stdout).wait.success?
-    raise GitCommandError.new("failed to init git repository\n#{stdout}") unless success
+    run_git("init", Tuple.new)
   end
 
   def remove_origin
     # This only fails when there is no origin specified
-    Process.new("git", {"-C", path, "remote", "remove", "origin"}).wait.success?
+    run_git("remote", {"remove", "origin"})
+  rescue
   end
 
   def add_origin(repository_uri : String)
-    stdout = IO::Memory.new
-    success = Process.new("git", {"-C", path, "remote", "add", "origin", repository_uri}, output: stdout, error: stdout).wait.success?
-    raise GitCommandError.new("failed to add git origin #{repository_uri.inspect}\n#{stdout}") unless success
+    run_git("remote", {"add", "origin", repository_uri})
   end
 
   def fetch(branch : String)
-    stdout = IO::Memory.new
-    success = Process.new("git", {"-C", path, "fetch", "--depth", "1", "origin", branch}, output: stdout, error: stdout).wait.success?
-    raise GitCommandError.new("failed to git fetch #{branch.inspect}\n#{stdout}") unless success
+    run_git("fetch", {"--depth", "1", "origin", branch})
   end
 
   def checkout(branch : String)
-    stdout = IO::Memory.new
-    success = Process.new("git", {"-C", path, "checkout", branch}, output: stdout, error: stdout).wait.success?
-    raise GitCommandError.new("failed to git checkout #{branch.inspect}\n#{stdout}") unless success
+    run_git("checkout", {branch})
   end
 
   def reset
-    stdout = IO::Memory.new
-    success = Process.new("git", {"-C", path, "reset", "--hard"}, output: stdout, error: stdout).wait.success?
-    raise GitCommandError.new("failed to git reset\n#{stdout}") unless success
-
-    stdout = IO::Memory.new
-    success = Process.new("git", {"-C", path, "clean", "-fd", "-fx"}, output: stdout, error: stdout).wait.success?
-    raise GitCommandError.new("failed to git clean\n#{stdout}") unless success
+    run_git("reset", {"--hard"})
+    run_git("clean", {"-fd", "-fx"})
   end
 
   # clones just the repository history
   def clone_logs(repository_uri : String, branch : String, depth : Int? = 50)
-    args = ["-C", path, "clone", repository_uri, "-b", branch]
+    args = [repository_uri, "-b", branch]
     args.concat({"--depth", depth.to_s}) if depth
     # bare repo, no file data, quiet clone, . = clone into current directory
     args.concat({"--bare", "--filter=blob:none", "-q", "."})
-
-    stdout = IO::Memory.new
-    success = Process.new("git", args, output: stdout, error: stdout).wait.success?
-    raise GitCommandError.new("failed to clone git history from remote\n#{stdout}") unless success
+    run_git("clone", args)
   end
 
   # pull latest logs
   def pull_logs
-    stdout = IO::Memory.new
-    success = Process.new("git", {"-C", path, "fetch", "origin", "+refs/heads/*:refs/heads/*", "--prune"}, output: stdout, error: stdout).wait.success?
-    raise GitCommandError.new("failed to update cache from remote\n#{stdout}") unless success
+    run_git("fetch", {"origin", "+refs/heads/*:refs/heads/*", "--prune"})
   end
 
   # clone and grab commits
@@ -75,19 +58,13 @@ struct GitClient::Commands
 
   # grab commits from cached repository
   def commits(file : String? = nil, depth : Int? = 50)
-    stdout = IO::Memory.new
     args = [
-      "--no-pager",
-      "-C", path,
-      "log",
       "--format=#{LOG_FORMAT}",
       "--no-color",
     ]
     args.concat({"-n", depth.to_s}) if depth
     args.concat({"--", file.to_s}) if file
-    success = Process.new("git", args, output: stdout, error: stdout).wait.success?
-    raise GitCommandError.new("failed to obtain git history\n#{stdout}") unless success
-
+    stdout = run_git("log", args)
     stdout.tap(&.rewind)
       .each_line("<--\n\n-->")
       .reject(&.empty?)
@@ -100,5 +77,17 @@ struct GitClient::Commands
           date: commit[1]
         )
       }.to_a
+  end
+
+  def run_git(command : String, args : Enumerable)
+    stdout = IO::Memory.new
+    git_args = [
+      "--no-pager",
+      "-C", path,
+      command,
+    ].concat(args)
+    success = Process.new("git", git_args, output: stdout, error: stdout).wait.success?
+    raise GitCommandError.new("filed to git #{command}\n#{stdout}") unless success
+    stdout
   end
 end
