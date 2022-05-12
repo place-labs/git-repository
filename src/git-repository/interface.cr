@@ -1,4 +1,5 @@
 require "file_utils"
+require "./releases"
 require "./commit"
 require "./errors"
 
