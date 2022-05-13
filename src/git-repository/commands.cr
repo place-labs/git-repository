@@ -79,15 +79,45 @@ struct GitRepository::Commands
       }.to_a
   end
 
-  def run_git(command : String, args : Enumerable)
+  def run_git(command : String, args : Enumerable, timeout : Time::Span = 5.minutes)
     stdout = IO::Memory.new
     git_args = [
       "--no-pager",
       "-C", path,
       command,
     ].concat(args)
-    success = Process.new("git", git_args, output: stdout, error: stdout).wait.success?
-    raise GitCommandError.new("filed to git #{command}\n#{stdout}") unless success
+
+    result = Channel(Bool).new(1)
+    process_launched = Channel(Process?).new(1)
+    spawn do
+      begin
+        Process.run(
+          "git", git_args,
+          output: stdout,
+          error: stdout,
+          input: Process::Redirect::Close,
+        ) do |process|
+          process_launched.send(process)
+        end
+        status = $?
+        result.send(status.success?)
+      rescue error
+        process_launched.send(nil)
+      end
+    end
+
+    if process = process_launched.receive
+      select
+      when success = result.receive
+        raise GitCommandError.new("failed to git #{command}\n#{stdout}") unless success
+      when timeout(timeout)
+        process.terminate
+        raise IO::TimeoutError.new("git operation took too long\n#{stdout}")
+      end
+    else
+      raise "failed to launch git process"
+    end
+
     stdout
   end
 end
