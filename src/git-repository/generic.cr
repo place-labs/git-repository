@@ -40,6 +40,7 @@ class GitRepository::Generic < GitRepository::Interface
     output.compact_map do |ref|
       next if ref.empty?
       parts = ref.split('\t', limit: 2)
+      next unless parts.size == 2
       # ref => commit hash
       {parts[1].split(split_string, 2)[1], parts[0]}
     end.to_h
