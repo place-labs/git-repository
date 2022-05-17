@@ -13,8 +13,8 @@ module GitRepository
     password = uri.password || password
 
     case downcased_host
-    # case "www.github.com", "github.com"
-    # once we add specific providers
+    when "dev.azure.com"
+      GitRepository::Adapters::DevAzure.new(uri.to_s, username, password, branch.presence)
     else
       GitRepository::Generic.new(uri.to_s, username, password, branch.presence)
     end
@@ -22,3 +22,4 @@ module GitRepository
 end
 
 require "./git-repository/generic"
+require "./git-repository/adapters/dev-azure"
