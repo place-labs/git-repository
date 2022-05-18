@@ -12,7 +12,7 @@ class GitRepository::Adapters::DevAzure < GitRepository::Generic
 
     # https://dev.azure.com/{organization}/{project}/_git/{repositoryId}
     uri = URI.parse(@repository)
-    path_components = URI.decode(uri.path).split('/')
+    path_components = uri.path.split('/')
     @organization = path_components[1]
     @project = path_components[2]
     @repo_id = path_components[4]
