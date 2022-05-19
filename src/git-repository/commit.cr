@@ -10,6 +10,9 @@ struct GitRepository::Commit
 
   getter commit : String
 
+  @[JSON::Field(ignore: true)]
+  getter time : Time { Time.parse_rfc3339(date.not_nil!) }
+
   def initialize(
     @hash : String,
     @subject : String,

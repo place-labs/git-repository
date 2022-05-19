@@ -9,8 +9,9 @@ abstract class GitRepository::Interface
   getter password : String?
   getter! cached_branch : String
   getter? use_cache : Bool
+  getter cache_path : String { create_temp_folder }
 
-  def initialize(@repository : String, @username : String? = nil, @password : String? = nil, branch : String? = nil)
+  def initialize(@repository : String, @username : String? = nil, @password : String? = nil, branch : String? = nil, @cache_path : String? = nil)
     uri = URI.parse(@repository)
     uri.user = uri.user || username
     uri.password = uri.password || password
@@ -23,7 +24,7 @@ abstract class GitRepository::Interface
   abstract def branches : Hash(String, String)
   abstract def tags : Hash(String, String)
   abstract def commits(branch : String, depth : Int? = 50) : Array(Commit)
-  abstract def commits(branch : String, file : String, depth : Int? = 50) : Array(Commit)
+  abstract def commits(branch : String, file : String | Enumerable(String), depth : Int? = 50) : Array(Commit)
   abstract def fetch_commit(ref : String, download_to_path : String | Path) : Commit
 
   module TempFolders

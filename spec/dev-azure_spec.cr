@@ -22,5 +22,12 @@ module GitRepository::Adapters
       branch_commits = client.commits("master", 1)
       branch_commits.size.should eq 1
     end
+
+    it "should return commits for multiple files" do
+      branch_commits = client.commits("master", 5)
+      branch_commits.size.should eq 2
+      file_commits = client.commits("master", {"testing.txt", "second.txt"}, 5)
+      file_commits.size.should eq 2
+    end
   end
 end

@@ -29,6 +29,11 @@ module GitRepository
       (branch_commits.map(&.hash) != file_commits.map(&.hash)).should be_true
     end
 
+    it "should return commits for multiple files" do
+      file_commits = client.commits("develop", {"package.json", ".gitignore"}, 5)
+      file_commits.size.should eq 5
+    end
+
     it "should work with a history cache" do
       cached_client = Generic.new("https://github.com/PlaceOS/backoffice", branch: "develop")
 

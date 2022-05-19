@@ -2,9 +2,7 @@ require "./interface"
 require "./commands"
 
 class GitRepository::Generic < GitRepository::Interface
-  getter cache_path : String { create_temp_folder }
-
-  def initialize(@repository : String, @username : String? = nil, @password : String? = nil, branch : String? = nil)
+  def initialize(@repository : String, @username : String? = nil, @password : String? = nil, branch : String? = nil, @cache_path : String? = nil)
     super
 
     # Ensure cache folder exists and is ready to list commits
@@ -54,20 +52,20 @@ class GitRepository::Generic < GitRepository::Interface
     ls_remote("tags")
   end
 
-  protected def get_commits(branch : String, file : String? = nil, depth : Int? = 50) : Array(Commit)
+  protected def get_commits(branch : String, file : String | Enumerable(String) | Nil = nil, depth : Int? = 50) : Array(Commit)
     if use_cache? && branch == cached_branch
       commands = Commands.new(cache_path)
       commands.pull_logs
       commands.commits(file, depth)
     else
       create_temp_folder do |temp_folder|
-        if file.presence && depth
+        if file
           # We need to download the full repo history to grab the file history
           commands = Commands.new(temp_folder)
           commands.clone_logs(@repository, branch, depth: nil)
           commands.commits(file, depth)
         else
-          Commands.new(temp_folder).commits(@repository, branch, file, depth)
+          Commands.new(temp_folder).commits(@repository, branch, nil, depth)
         end
       end
     end
@@ -77,7 +75,7 @@ class GitRepository::Generic < GitRepository::Interface
     get_commits(branch, depth: depth)
   end
 
-  def commits(branch : String, file : String, depth : Int? = 50) : Array(Commit)
+  def commits(branch : String, file : String | Enumerable(String), depth : Int? = 50) : Array(Commit)
     get_commits(branch, file, depth)
   end
 

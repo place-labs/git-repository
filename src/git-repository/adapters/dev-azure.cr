@@ -7,7 +7,7 @@ class GitRepository::Adapters::DevAzure < GitRepository::Generic
   getter project : String
   getter repo_id : String
 
-  def initialize(@repository : String, @username : String? = nil, @password : String? = nil, branch : String? = nil)
+  def initialize(@repository : String, @username : String? = nil, @password : String? = nil, branch : String? = nil, @cache_path : String? = nil)
     super
 
     # https://dev.azure.com/{organization}/{project}/_git/{repositoryId}
@@ -23,7 +23,7 @@ class GitRepository::Adapters::DevAzure < GitRepository::Generic
     @use_cache = false
   end
 
-  protected def get_commits(branch : String, file : String? = nil, depth : Int? = 50) : Array(Commit)
+  protected def get_commits(branch : String, file : String | Enumerable(String) | Nil = nil, depth : Int? = 50) : Array(Commit)
     uri = URI.parse("https://dev.azure.com/#{organization}/#{project}/_apis/git/repositories/#{repo_id}/commits?searchCriteria.itemVersion.version=#{branch}&api-version=5.0")
     client = ConnectProxy::HTTPClient.new(uri)
 
@@ -33,13 +33,27 @@ class GitRepository::Adapters::DevAzure < GitRepository::Generic
 
     params = uri.query_params
     params["searchCriteria.$top"] = depth.to_s if depth
-    params["searchCriteria.itemPath"] = "/#{file}" if file
-    uri.query_params = params
-    response = client.get(uri.request_target)
 
-    raise GitCommandError.new("dev.azure.com commits API request failed with #{response.status_code}\n#{response.body}") unless response.success?
+    case file
+    in Enumerable(String)
+      commits = [] of Commit
+      file.each do |path|
+        params["searchCriteria.itemPath"] = "/#{path}"
+        uri.query_params = params
+        response = client.get(uri.request_target)
+        raise GitCommandError.new("dev.azure.com commits API request failed with #{response.status_code}\n#{response.body}") unless response.success?
 
-    Commits.from_json(response.body).to_commits
+        commits.concat Commits.from_json(response.body).to_commits
+        commits.uniq!(&.hash)
+      end
+      commits.sort { |a, b| b.time <=> a.time }
+    in String, Nil
+      params["searchCriteria.itemPath"] = "/#{file}" if file
+      uri.query_params = params
+      response = client.get(uri.request_target)
+      raise GitCommandError.new("dev.azure.com commits API request failed with #{response.status_code}\n#{response.body}") unless response.success?
+      Commits.from_json(response.body).to_commits
+    end
   end
 
   struct Committer

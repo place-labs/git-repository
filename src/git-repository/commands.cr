@@ -57,13 +57,22 @@ struct GitRepository::Commands
   LOG_FORMAT = "format:%H%n%cI%n%an%n%s%n<--%n%n-->"
 
   # grab commits from cached repository
-  def commits(file : String? = nil, depth : Int? = 50)
+  def commits(file : String | Enumerable(String) | Nil = nil, depth : Int? = 50)
     args = [
       "--format=#{LOG_FORMAT}",
       "--no-color",
     ]
     args.concat({"-n", depth.to_s}) if depth
-    args.concat({"--", file.to_s}) if file
+
+    case file
+    in Enumerable(String)
+      args << "--"
+      args.concat(file)
+    in String
+      args.concat({"--", file})
+    in Nil
+    end
+
     stdout = run_git("log", args)
     stdout.tap(&.rewind)
       .each_line("<--\n\n-->")
@@ -79,7 +88,7 @@ struct GitRepository::Commands
       }.to_a
   end
 
-  def run_git(command : String, args : Enumerable, timeout : Time::Span = 5.minutes)
+  def run_git(command : String, args : Enumerable, timeout : Time::Span = 10.minutes)
     stdout = IO::Memory.new
     errout = IO::Memory.new
     git_args = [
