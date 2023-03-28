@@ -25,8 +25,16 @@ struct GitRepository::Commands
     run_git("fetch", {"--depth", "1", "origin", branch})
   end
 
+  def fetch_all(branch : String)
+    run_git("fetch", {"origin", branch})
+  end
+
   def checkout(branch : String)
     run_git("checkout", {branch})
+  end
+
+  def checkout(branch : String, file : String)
+    run_git("checkout", {branch, "--", file})
   end
 
   def reset

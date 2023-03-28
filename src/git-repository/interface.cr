@@ -34,7 +34,7 @@ abstract class GitRepository::Interface
       temp_folder
     end
 
-    def create_temp_folder
+    def create_temp_folder(&)
       temp_folder = create_temp_folder
       begin
         yield temp_folder

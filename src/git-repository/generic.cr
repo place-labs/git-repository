@@ -125,4 +125,24 @@ class GitRepository::Generic < GitRepository::Interface
       git.commits(depth: 1).first
     end
   end
+
+  def fetch_commit(branch : String, commit : String, source_file : String, download_to_path : String | Path) : Commit
+    download_to = download_to_path.to_s
+
+    # download the commit
+    create_temp_folder do |temp_folder|
+      git = Commands.new(temp_folder)
+      git.init
+      git.add_origin @repository
+      git.fetch_all branch             # git fetch origin branch
+      git.checkout branch              # git checkout branch or FETCH_HEAD
+      git.checkout commit, source_file # git checkout FETCH_HEAD or sha1 -- source_file
+
+      move_into_place(temp_folder, download_to)
+
+      # grab the current commit hash
+      git.path = download_to
+      git.commits(depth: 1).first
+    end
+  end
 end
