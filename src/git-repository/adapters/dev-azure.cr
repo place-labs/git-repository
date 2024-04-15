@@ -46,7 +46,7 @@ class GitRepository::Adapters::DevAzure < GitRepository::Generic
         commits.concat Commits.from_json(response.body).to_commits
         commits.uniq!(&.hash)
       end
-      commits.sort { |a, b| b.time <=> a.time }
+      commits.sort { |ref_a, ref_b| ref_b.time <=> ref_a.time }
     in String, Nil
       params["searchCriteria.itemPath"] = "/#{file}" if file
       uri.query_params = params

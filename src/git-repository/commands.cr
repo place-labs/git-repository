@@ -43,12 +43,18 @@ struct GitRepository::Commands
   end
 
   # clones just the repository history
-  def clone_logs(repository_uri : String, branch : String, depth : Int? = 50)
-    args = [repository_uri, "-b", branch]
+  def clone_logs(repository_uri : String, branch : String? = nil, depth : Int? = 50)
+    args = [repository_uri]
+    args.concat({"-b", branch.to_s}) if branch
     args.concat({"--depth", depth.to_s}) if depth
     # bare repo, no file data, quiet clone, . = clone into current directory
     args.concat({"--bare", "--filter=blob:none", "-q", "."})
     run_git("clone", args)
+  end
+
+  # clones the git data for the list of files
+  def clone_file_tree(repository_uri : String)
+    run_git("clone", {"--filter=blob:none", "--no-checkout", "--depth", "1", repository_uri, "-q", "."})
   end
 
   # pull latest logs
@@ -60,6 +66,17 @@ struct GitRepository::Commands
   def commits(repository_uri : String, branch : String, file : String? = nil, depth : Int? = 50)
     clone_logs(repository_uri, branch, depth)
     commits(file, depth)
+  end
+
+  # list files in the repositories
+  def list_files(path : String? = nil) : Array(String)
+    args = ["--name-only", "-r", "HEAD"]
+    args << path.to_s if path
+    stdout = run_git("ls-tree", args)
+    stdout.tap(&.rewind)
+      .each_line
+      .reject(&.empty?)
+      .to_a
   end
 
   LOG_FORMAT = "format:%H%n%cI%n%an%n%s%n<--%n%n-->"
