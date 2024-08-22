@@ -53,8 +53,12 @@ struct GitRepository::Commands
   end
 
   # clones the git data for the list of files
-  def clone_file_tree(repository_uri : String)
-    run_git("clone", {"--filter=blob:none", "--no-checkout", "--depth", "1", repository_uri, "-q", "."})
+  def clone_file_tree(repository_uri : String, branch : String? = nil)
+    if branch.presence
+      run_git("clone", {"--filter=blob:none", "--no-checkout", "--depth", "1", "--branch", branch, repository_uri, "-q", "."})
+    else
+      run_git("clone", {"--filter=blob:none", "--no-checkout", "--depth", "1", repository_uri, "-q", "."})
+    end
   end
 
   # pull latest logs
