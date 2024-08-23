@@ -146,10 +146,14 @@ class GitRepository::Generic < GitRepository::Interface
     end
   end
 
-  def file_list(ref : String? = nil, path : String? = nil) : Array(String)
+  def file_list(ref : String? = nil, path : String? = nil, branch : String? = nil) : Array(String)
     create_temp_folder do |temp_folder|
       git = Commands.new(temp_folder)
-      git.clone_file_tree(@repository, ref)
+      git.clone_file_tree(@repository, branch)
+      if ref
+        git.fetch ref    # git fetch origin <commit_hash>
+        git.checkout ref # git checkout <commit_hash>
+      end
       git.list_files path # git ls-tree --name-only -r HEAD
     end
   end
