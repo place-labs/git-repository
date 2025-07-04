@@ -41,7 +41,17 @@ abstract class GitRepository::Interface
         yield temp_folder
       ensure
         # delete the temp folder
-        spawn { FileUtils.rm_rf(temp_folder) }
+        spawn { cleanup(temp_folder) }
+      end
+    end
+
+    def cleanup(temp_folder : String, tries = 0)
+      FileUtils.rm_rf(temp_folder)
+    rescue error
+      Log.warn(exception: error) { "failed to cleanup folder: #{temp_folder}" }
+      if tries < 2
+        sleep 1.second
+        cleanup(temp_folder, tries + 1)
       end
     end
   end

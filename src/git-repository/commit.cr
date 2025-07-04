@@ -17,7 +17,7 @@ struct GitRepository::Commit
     @hash : String,
     @subject : String,
     @author : String? = nil,
-    @date : String? = nil
+    @date : String? = nil,
   )
     @commit = @hash
   end

@@ -1,6 +1,9 @@
 require "uri"
+require "log"
 
 module GitRepository
+  Log = ::Log.for(self)
+
   {% begin %}
     VERSION = {{ `shards version "#{__DIR__}"`.chomp.stringify.downcase }}
   {% end %}

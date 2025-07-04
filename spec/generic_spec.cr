@@ -48,7 +48,7 @@ module GitRepository
       cached_client = nil
 
       GC.collect
-      sleep 0.2
+      sleep 200.milliseconds
       GC.collect
 
       cached_client.should be_nil
@@ -63,7 +63,7 @@ module GitRepository
         commit.hash.size.should be >= 40
         Dir.entries(path).includes?("index.html").should be_true
       end
-      sleep 0.2
+      sleep 200.milliseconds
 
       # check we're checking a path
       folder_was.size.should be >= 1

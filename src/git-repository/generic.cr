@@ -103,7 +103,7 @@ class GitRepository::Generic < GitRepository::Interface
 
     # cleanup old files without blocking
     if old_existing_files
-      spawn { FileUtils.rm_rf(old_existing_files) }
+      spawn { cleanup(old_existing_files) }
     end
   end
 
