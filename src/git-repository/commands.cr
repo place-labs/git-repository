@@ -83,6 +83,17 @@ struct GitRepository::Commands
       .to_a
   end
 
+  # list folders in the repositories
+  def list_folders(path : String? = nil) : Array(String)
+    args = ["--name-only", "-d", "-r", "HEAD"]
+    args << path.to_s if path
+    stdout = run_git("ls-tree", args)
+    stdout.tap(&.rewind)
+      .each_line
+      .reject(&.empty?)
+      .to_a
+  end
+
   LOG_FORMAT = "format:%H%n%cI%n%an%n%s%n<--%n%n-->"
 
   # grab commits from cached repository
