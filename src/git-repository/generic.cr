@@ -157,4 +157,48 @@ class GitRepository::Generic < GitRepository::Interface
       git.list_files path # git ls-tree --name-only -r HEAD
     end
   end
+
+  def folder_list(ref : String? = nil, path : String? = nil, branch : String? = nil) : Array(String)
+    create_temp_folder do |temp_folder|
+      git = Commands.new(temp_folder)
+      git.clone_file_tree(@repository, branch)
+      if ref
+        git.fetch ref    # git fetch origin <commit_hash>
+        git.checkout ref # git checkout <commit_hash>
+      end
+      git.list_folders path # git ls-tree --name-only -d -r HEAD
+    end
+  end
+
+  def fetch_folder(
+    ref : String,
+    folder : String,
+    download_to_path : String | Path,
+    depth : Int? = 1,
+  ) : Commit
+    download_to = download_to_path.to_s
+
+    create_temp_folder do |temp_folder|
+      git = Commands.new(temp_folder)
+      git.init
+      git.add_origin @repository
+
+      if depth && depth == 1
+        git.fetch(ref) # shallow fetch
+      elsif depth.nil?
+        git.fetch_all(ref) # full history
+      else
+        git.run_git("fetch", {"--depth", depth.to_s, "origin", ref})
+      end
+
+      git.sparse_checkout_init
+      git.sparse_checkout_set(folder)
+      git.checkout("FETCH_HEAD")
+
+      move_into_place(temp_folder, download_to)
+
+      git.path = download_to
+      git.commits(depth: 1).first
+    end
+  end
 end
