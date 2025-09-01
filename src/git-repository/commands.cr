@@ -159,4 +159,12 @@ struct GitRepository::Commands
 
     stdout
   end
+
+  def sparse_checkout_init
+    run_git("sparse-checkout", {"init", "--cone"})
+  end
+
+  def sparse_checkout_set(path : String)
+    run_git("sparse-checkout", {"set", path})
+  end
 end
