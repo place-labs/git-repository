@@ -170,6 +170,18 @@ class GitRepository::Generic < GitRepository::Interface
     end
   end
 
+  def file_contents(ref : String? = nil, path : String? = nil, branch : String? = nil) : String
+    create_temp_folder do |temp_folder|
+      git = Commands.new(temp_folder)
+      git.clone_file_tree(@repository, branch)
+      if ref
+        git.fetch ref    # git fetch origin <commit_hash>
+        git.checkout ref # git checkout <commit_hash>
+      end
+      git.show(path) # git --no-pager show HEAD:file/path
+    end
+  end
+
   def fetch_folder(
     ref : String,
     folder : String,

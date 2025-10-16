@@ -94,6 +94,16 @@ struct GitRepository::Commands
       .to_a
   end
 
+  # get file contents from the repository
+  def show(path : String? = nil) : String
+    if path
+      stdout = run_git("show", ["HEAD:#{path}"])
+    else
+      stdout = run_git("show", ["HEAD"])
+    end
+    stdout.tap(&.rewind).to_s
+  end
+
   LOG_FORMAT = "format:%H%n%cI%n%an%n%s%n<--%n%n-->"
 
   # grab commits from cached repository
