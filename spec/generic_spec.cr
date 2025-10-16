@@ -69,5 +69,19 @@ module GitRepository
       folder_was.size.should be >= 1
       Dir.exists?(folder_was).should be_false
     end
+
+    it "should return file contents" do
+      # Test getting file contents from default branch
+      contents = client.file_contents(path: "package.json", branch: "develop")
+      contents.should_not be_empty
+      contents.should contain("name")
+      contents.should contain("version")
+
+      # Test getting file contents from a specific ref
+      commits = client.commits("develop", "package.json", 1)
+      ref_contents = client.file_contents(ref: commits.first.hash, path: "package.json", branch: "develop")
+      ref_contents.should_not be_empty
+      ref_contents.should contain("name")
+    end
   end
 end
