@@ -26,8 +26,9 @@ abstract class GitRepository::Interface
   abstract def commits(branch : String, depth : Int? = 50) : Array(Commit)
   abstract def commits(branch : String, file : String | Enumerable(String), depth : Int? = 50) : Array(Commit)
   abstract def fetch_commit(ref : String, download_to_path : String | Path) : Commit
-  abstract def file_list(ref : String? = nil, path : String? = nil) : Array(String)
-  abstract def folder_list(ref : String? = nil, path : String? = nil) : Array(String)
+  abstract def file_list(ref : String? = nil, path : String? = nil, branch : String? = nil) : Array(String)
+  abstract def folder_list(ref : String? = nil, path : String? = nil, branch : String? = nil) : Array(String)
+  abstract def file_contents(ref : String? = nil, path : String? = nil, branch : String? = nil) : String
   abstract def fetch_folder(ref : String, folder : String, download_to_path : String | Path, depth : Int? = 1) : Commit
 
   module TempFolders
