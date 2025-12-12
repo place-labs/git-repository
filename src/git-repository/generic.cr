@@ -213,4 +213,51 @@ class GitRepository::Generic < GitRepository::Interface
       git.commits(depth: 1).first
     end
   end
+
+  def fetch_folder_contents(
+    ref : String,
+    folder : String,
+    download_to_path : String | Path,
+    depth : Int? = 1,
+  ) : Commit
+    download_to = download_to_path.to_s
+
+    create_temp_folder do |temp_folder|
+      git = Commands.new(temp_folder)
+      git.init
+      git.add_origin @repository
+
+      if depth && depth == 1
+        git.fetch(ref) # shallow fetch
+      elsif depth.nil?
+        git.fetch_all(ref) # full history
+      else
+        git.run_git("fetch", {"--depth", depth.to_s, "origin", ref})
+      end
+
+      git.sparse_checkout_init
+      git.sparse_checkout_set(folder)
+      git.checkout("FETCH_HEAD")
+
+      # Get commit info before moving files (while .git is still available)
+      commit_info = git.commits(depth: 1).first
+
+      # Get the source folder path within temp directory
+      source_folder = File.join(temp_folder, folder)
+
+      # Ensure destination exists
+      Dir.mkdir_p(download_to)
+
+      # Move contents of the folder (not the folder itself) using existing move_into_place
+      if Dir.exists?(source_folder)
+        Dir.each_child(source_folder) do |item|
+          source_path = File.join(source_folder, item)
+          dest_path = File.join(download_to, item)
+          move_into_place(source_path, dest_path)
+        end
+      end
+
+      commit_info
+    end
+  end
 end

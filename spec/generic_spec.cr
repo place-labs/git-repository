@@ -70,6 +70,36 @@ module GitRepository
       Dir.exists?(folder_was).should be_false
     end
 
+    it "should download folder contents without folder structure" do
+      folder_was = ""
+      client.create_temp_folder do |path|
+        folder_was = path
+        commit = client.fetch_folder_contents("develop", "apps", path)
+        commit.hash.size.should be >= 40
+
+        # Check that contents are directly in the path (not in apps/ subfolder)
+        entries = Dir.entries(path).reject(&.in?(".", ".."))
+        entries.size.should be > 0
+
+        # Should not have 'apps' folder, contents should be directly available
+        entries.includes?("apps").should be_false
+
+        # Should have the known contents from apps folder
+        entries.includes?("backoffice").should be_true
+        entries.includes?("backoffice-e2e").should be_true
+        entries.includes?(".gitkeep").should be_true
+
+        # Verify backoffice and backoffice-e2e are directories
+        File.directory?(File.join(path, "backoffice")).should be_true
+        File.directory?(File.join(path, "backoffice-e2e")).should be_true
+      end
+      sleep 200.milliseconds
+
+      # check we're checking a path
+      folder_was.size.should be >= 1
+      Dir.exists?(folder_was).should be_false
+    end
+
     it "should return file contents" do
       # Test getting file contents from default branch
       contents = client.file_contents(path: "package.json", branch: "develop")
